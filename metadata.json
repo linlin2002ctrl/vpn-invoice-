@@ -1,0 +1,7 @@
+{
+  "name": "VPN Invoice Generator",
+  "description": "A tool for generating professional VPN purchase receipts and instructions for Telegram.",
+  "requestFramePermissions": [
+    "clipboard-read"
+  ]
+}
