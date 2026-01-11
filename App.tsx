@@ -18,7 +18,8 @@ import {
   Wallet,
   ShieldCheck,
   CreditCard,
-  Waves
+  Waves,
+  ScanQrCode
 } from 'lucide-react';
 
 // --- 1. CONFIGURATION ---
@@ -34,7 +35,7 @@ const SHOP_CONFIG = {
   shopHours: "6:00 PM - 10:00 PM"
 };
 
-const STORAGE_KEY = 'vpn_invoice_draft_v7';
+const STORAGE_KEY = 'vpn_invoice_draft_v8';
 
 // --- TYPES ---
 
@@ -57,6 +58,7 @@ interface FormData {
   durationIdx: number;
   dataPlan: string;
   outlineKey: string;
+  smartKey: string;
 }
 
 const INITIAL_STATE: FormData = {
@@ -65,6 +67,7 @@ const INITIAL_STATE: FormData = {
   durationIdx: 0,
   dataPlan: '',
   outlineKey: '',
+  smartKey: '',
 };
 
 // --- HELPER FUNCTIONS ---
@@ -151,6 +154,11 @@ export default function App() {
   const generatedMessage = useMemo(() => {
     const keyPart = formData.outlineKey ? `\`\`\`${formData.outlineKey.trim()}\`\`\`` : '```[KEY_WILL_APPEAR_HERE]```';
     
+    // Smart Key Section (Conditional)
+    const smartKeySection = formData.smartKey && formData.smartKey.trim() !== '' 
+      ? `\n👇 **Smart Key (Data ကြည့်ရန် ဤ Key ကိုသုံးပါ)** 👇\n\`\`\`${formData.smartKey.trim()}\`\`\``
+      : '';
+
     return `🎉 **ဝယ်ယူအားပေးမှုအတွက် ကျေးဇူးအထူးတင်ပါတယ်ခင်ဗျာ** 🙏
 
 👤 **Username:** ${formData.username || '[Username]'}
@@ -160,6 +168,7 @@ export default function App() {
 
 👇 **Outline Key ကို ယူရန် Copy နှိပ်ပါ** 👇
 ${keyPart}
+${smartKeySection}
 
 💸 **ငွေလွှဲရန် (KPay / Wave):**
 KBZ Pay: ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
@@ -209,8 +218,22 @@ Wave Pay: ${SHOP_CONFIG.waveNumber} (${SHOP_CONFIG.waveName})
       }
     } catch (err) {
       console.error("Clipboard read failed", err);
-      // Fallback: Focus the textarea so user can paste manually
+      // Fallback
       const el = document.querySelector('textarea[name="outlineKey"]') as HTMLTextAreaElement;
+      if (el) el.focus();
+    }
+  };
+
+  const handlePasteSmartKey = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setFormData(prev => ({ ...prev, smartKey: text }));
+      }
+    } catch (err) {
+      console.error("Clipboard read failed", err);
+      // Fallback
+      const el = document.querySelector('textarea[name="smartKey"]') as HTMLTextAreaElement;
       if (el) el.focus();
     }
   };
@@ -252,21 +275,21 @@ Wave Pay: ${SHOP_CONFIG.waveNumber} (${SHOP_CONFIG.waveName})
             </div>
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight leading-tight">{SHOP_CONFIG.shopName}</h1>
-              <p className="text-indigo-100 text-xs md:text-sm font-medium opacity-90">Invoice Generator v7.0 Pro</p>
+              <p className="text-indigo-100 text-xs md:text-sm font-medium opacity-90">Invoice Generator v8.2 Pro</p>
             </div>
           </div>
           
           <div className="flex items-center gap-3 relative z-10">
             <button 
               onClick={toggleTheme}
-              className="p-2.5 rounded-xl bg-indigo-700/50 text-white/90 hover:bg-white/20 hover:text-white transition-all active:scale-95 border border-indigo-500/30"
+              className="p-2.5 rounded-xl bg-indigo-700/50 text-white/90 hover:bg-white/20 hover:text-white transition-all hover:scale-105 active:scale-95 border border-indigo-500/30"
               title="Toggle Theme"
             >
               {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
             </button>
             <button 
               onClick={handleReset}
-              className="p-2.5 rounded-xl bg-indigo-700/50 text-white/90 hover:bg-white/20 hover:text-white transition-all active:scale-95 border border-indigo-500/30"
+              className="p-2.5 rounded-xl bg-indigo-700/50 text-white/90 hover:bg-white/20 hover:text-white transition-all hover:scale-105 active:scale-95 border border-indigo-500/30"
               title="Reset Form"
             >
               <RotateCcw size={20} />
@@ -397,7 +420,7 @@ Wave Pay: ${SHOP_CONFIG.waveNumber} (${SHOP_CONFIG.waveName})
                   </label>
                   <button
                     onClick={handlePasteKey}
-                    className="text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center gap-1.5 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-md"
+                    className="text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center gap-1.5 hover:text-indigo-800 dark:hover:text-indigo-300 transition-all hover:scale-105 active:scale-95 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-md"
                     title="Paste from clipboard"
                   >
                     <ClipboardPaste size={14} /> 
@@ -424,6 +447,38 @@ Wave Pay: ${SHOP_CONFIG.waveNumber} (${SHOP_CONFIG.waveName})
                   />
                 </div>
                 {errors.outlineKey && <p className="text-red-500 text-xs mt-1.5 ml-1 font-medium">Outline Key is required</p>}
+              </div>
+
+              {/* Smart Key (New v8.2 Feature) */}
+              <div className="group">
+                <div className="flex justify-between items-center mb-2 px-1">
+                   <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Smart Key <span className="text-gray-400 font-normal lowercase">(optional)</span>
+                  </label>
+                  <button
+                    onClick={handlePasteSmartKey}
+                    className="text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center gap-1.5 hover:text-indigo-800 dark:hover:text-indigo-300 transition-all hover:scale-105 active:scale-95 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-md"
+                    title="Paste from clipboard"
+                  >
+                    <ClipboardPaste size={14} /> 
+                    <span>Paste</span>
+                  </button>
+                </div>
+                
+                <div className="relative">
+                  <div className="absolute top-3.5 left-4 pointer-events-none text-gray-400">
+                    <ScanQrCode size={18} />
+                  </div>
+                  <textarea
+                    name="smartKey"
+                    autoComplete="off"
+                    value={formData.smartKey}
+                    onChange={handleInputChange}
+                    rows={2}
+                    placeholder="Paste smart key here (Optional)"
+                    className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-gray-900 dark:text-white font-mono text-xs md:text-sm placeholder-gray-400 resize-none custom-scrollbar"
+                  />
+                </div>
               </div>
 
             </div>
@@ -483,7 +538,7 @@ Wave Pay: ${SHOP_CONFIG.waveNumber} (${SHOP_CONFIG.waveName})
               {/* Copy Button */}
               <button
                 onClick={handleCopy}
-                className={`w-full py-4 px-6 rounded-xl font-bold text-base shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2.5 ${
+                className={`w-full py-4 px-6 rounded-xl font-bold text-base shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2.5 ${
                   copied 
                     ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/30' 
                     : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/30'
