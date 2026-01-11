@@ -25,6 +25,8 @@ const SHOP_CONFIG = {
   shopName: "VPN Invoice",
   kpayName: "Htet Aung Lin",
   kpayNumber: "09964520268",
+  waveName: "Htet Aung Lin",
+  waveNumber: "09964520268",
   phoneNumber: "09964520268",
   telegramUser: "@nolan112002",
   shopHours: "6:00 PM - 10:00 PM"
@@ -157,8 +159,9 @@ export default function App() {
 👇 **Outline Key ကို ယူရန် Copy နှိပ်ပါ** 👇
 ${keyPart}
 
-💸 **ငွေလွှဲရန် (KPay):**
-${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
+💸 **ငွေလွှဲရန် (KPay / Wave):**
+KBZ Pay: ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
+Wave Pay: ${SHOP_CONFIG.waveNumber} (${SHOP_CONFIG.waveName})
 
 -----------------------------
 ⏰ **ဆိုင်ဖွင့်ချိန်:** ${SHOP_CONFIG.shopHours} အထိ
@@ -517,7 +520,7 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
                             <Wallet size={16} />
                         </div>
                         <div className="flex flex-col overflow-hidden">
-                            <span className="text-[10px] text-gray-400 uppercase font-bold">KPay / Phone</span>
+                            <span className="text-[10px] text-gray-400 uppercase font-bold">KPay / Wave / Phone</span>
                             <span className="text-xs font-medium truncate">{SHOP_CONFIG.phoneNumber}</span>
                         </div>
                     </div>
