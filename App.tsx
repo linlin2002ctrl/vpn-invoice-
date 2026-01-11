@@ -152,12 +152,20 @@ export default function App() {
   const formattedExpireDate = formatDateForDisplay(expireDateRaw);
 
   const generatedMessage = useMemo(() => {
-    const keyPart = formData.outlineKey ? `\`\`\`${formData.outlineKey.trim()}\`\`\`` : '```[KEY_WILL_APPEAR_HERE]```';
+    // Fix: Added \n (newlines) inside the backticks to force Telegram Mobile to show the Copy Box
+    const mainKeyPart = formData.outlineKey 
+      ? `\`\`\`\n${formData.outlineKey.trim()}\n\`\`\`` 
+      : '```\n[MAIN KEY]\n```';
     
-    // Smart Key Section (Conditional)
-    const smartKeySection = formData.smartKey && formData.smartKey.trim() !== '' 
-      ? `\n👇 **Smart Key (Data ကြည့်ရန် ဤ Key ကိုသုံးပါ)** 👇\n\`\`\`${formData.smartKey.trim()}\`\`\``
-      : '';
+    // Logic for Smart Key (Optional)
+    let smartKeySection = '';
+    if (formData.smartKey && formData.smartKey.trim() !== '') {
+      smartKeySection = `
+👇 **Smart Key (Data ကြည့်ရန် ဤ Key ကိုသုံးပါ)** 👇
+\`\`\`
+${formData.smartKey.trim()}
+\`\`\``;
+    }
 
     return `🎉 **ဝယ်ယူအားပေးမှုအတွက် ကျေးဇူးအထူးတင်ပါတယ်ခင်ဗျာ** 🙏
 
@@ -167,15 +175,14 @@ export default function App() {
 📦 **Data Plan:** ${formData.dataPlan || '0'} GB
 
 👇 **Outline Key ကို ယူရန် Copy နှိပ်ပါ** 👇
-${keyPart}
+${mainKeyPart}
 ${smartKeySection}
 
-💸 **ငွေလွှဲရန် (KPay / Wave):**
-KBZ Pay: ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
-Wave Pay: ${SHOP_CONFIG.waveNumber} (${SHOP_CONFIG.waveName})
+💸 **ငွေလွှဲရန် (KPay):**
+${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
 
 -----------------------------
-⏰ **ဆိုင်ဖွင့်ချိန်:** ${SHOP_CONFIG.shopHours} အထိ
+⏰ **ဆိုင်ဖွင့်ချိန်:** ${SHOP_CONFIG.shopHours.replace(/PM/g, "နာရီ").replace(/AM/g, "နာရီ").replace(/:00/g, "")} အထိ
 🆘 အကူအညီလိုပါက **${SHOP_CONFIG.telegramUser}** သို့ ဆက်သွယ်နိုင်ပါသည်။
 ⚡ ၁၀ မိနစ်အတွင်း စာမပြန်ပါက **${SHOP_CONFIG.phoneNumber}** သို့ ဖုန်းခေါ်ဆိုနိုင်ပါသည်။
 
@@ -520,7 +527,7 @@ Wave Pay: ${SHOP_CONFIG.waveNumber} (${SHOP_CONFIG.waveName})
                         if (line.trim().startsWith('```')) {
                            const content = line.replace(/```/g, '');
                            return (
-                               <div key={i} className="my-3 p-3 rounded-lg bg-gray-100 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 font-mono text-xs break-all text-indigo-600 dark:text-indigo-400 select-all">
+                               <div key={i} className="my-1 p-2 rounded bg-gray-100 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 font-mono text-xs break-all text-indigo-600 dark:text-indigo-400 select-all min-h-[10px]">
                                    {content}
                                </div>
                            )
