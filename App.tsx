@@ -10,16 +10,14 @@ import {
   Send,
   Moon,
   Sun,
-  Store,
   Phone,
   MessageCircle,
   Clock,
   ClipboardPaste,
-  Wallet,
   ShieldCheck,
   CreditCard,
   Waves,
-  ScanQrCode
+  Smartphone
 } from 'lucide-react';
 
 // --- 1. CONFIGURATION ---
@@ -35,7 +33,7 @@ const SHOP_CONFIG = {
   shopHours: "6:00 PM - 10:00 PM"
 };
 
-const STORAGE_KEY = 'vpn_invoice_draft_v8';
+const STORAGE_KEY = 'vpn_invoice_draft_v8_3';
 
 // --- TYPES ---
 
@@ -108,7 +106,7 @@ export default function App() {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // Merge with initial state to ensure all fields exist (in case of version updates)
+          // Merge with initial state to ensure all fields exist
           return { ...INITIAL_STATE, ...parsed };
         } catch (e) {
           console.error("Failed to parse draft", e);
@@ -152,7 +150,7 @@ export default function App() {
   const formattedExpireDate = formatDateForDisplay(expireDateRaw);
 
   const generatedMessage = useMemo(() => {
-    // Fix: Added \n (newlines) inside the backticks to force Telegram Mobile to show the Copy Box
+    // CRITICAL: Added \n (newlines) inside the backticks to force Telegram Mobile to show the Copy Box
     const mainKeyPart = formData.outlineKey 
       ? `\`\`\`\n${formData.outlineKey.trim()}\n\`\`\`` 
       : '```\n[MAIN KEY]\n```';
@@ -162,10 +160,14 @@ export default function App() {
     if (formData.smartKey && formData.smartKey.trim() !== '') {
       smartKeySection = `
 👇 **Smart Key (Data ကြည့်ရန် ဤ Key ကိုသုံးပါ)** 👇
-\`\`\`
-${formData.smartKey.trim()}
-\`\`\``;
+\`\`\`\n${formData.smartKey.trim()}\n\`\`\``;
     }
+
+    // Format Shop Hours for Message
+    const formattedHours = SHOP_CONFIG.shopHours
+      .replace(/PM/g, "နာရီ")
+      .replace(/AM/g, "နာရီ")
+      .replace(/:00/g, "");
 
     return `🎉 **ဝယ်ယူအားပေးမှုအတွက် ကျေးဇူးအထူးတင်ပါတယ်ခင်ဗျာ** 🙏
 
@@ -182,7 +184,7 @@ ${smartKeySection}
 ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
 
 -----------------------------
-⏰ **ဆိုင်ဖွင့်ချိန်:** ${SHOP_CONFIG.shopHours.replace(/PM/g, "နာရီ").replace(/AM/g, "နာရီ").replace(/:00/g, "")} အထိ
+⏰ **ဆိုင်ဖွင့်ချိန်:** ${formattedHours} အထိ
 🆘 အကူအညီလိုပါက **${SHOP_CONFIG.telegramUser}** သို့ ဆက်သွယ်နိုင်ပါသည်။
 ⚡ ၁၀ မိနစ်အတွင်း စာမပြန်ပါက **${SHOP_CONFIG.phoneNumber}** သို့ ဖုန်းခေါ်ဆိုနိုင်ပါသည်။
 
@@ -282,7 +284,7 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
             </div>
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight leading-tight">{SHOP_CONFIG.shopName}</h1>
-              <p className="text-indigo-100 text-xs md:text-sm font-medium opacity-90">Invoice Generator v8.2 Pro</p>
+              <p className="text-indigo-100 text-xs md:text-sm font-medium opacity-90">Invoice Generator v8.3</p>
             </div>
           </div>
           
@@ -456,7 +458,7 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
                 {errors.outlineKey && <p className="text-red-500 text-xs mt-1.5 ml-1 font-medium">Outline Key is required</p>}
               </div>
 
-              {/* Smart Key (New v8.2 Feature) */}
+              {/* Smart Key (New v8.3 Feature: Smartphone Icon) */}
               <div className="group">
                 <div className="flex justify-between items-center mb-2 px-1">
                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -474,7 +476,7 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
                 
                 <div className="relative">
                   <div className="absolute top-3.5 left-4 pointer-events-none text-gray-400">
-                    <ScanQrCode size={18} />
+                    <Smartphone size={18} />
                   </div>
                   <textarea
                     name="smartKey"
