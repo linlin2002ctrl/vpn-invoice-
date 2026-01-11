@@ -16,7 +16,9 @@ import {
   Clock,
   ClipboardPaste,
   Wallet,
-  ShieldCheck
+  ShieldCheck,
+  CreditCard,
+  Waves
 } from 'lucide-react';
 
 // --- 1. CONFIGURATION ---
@@ -505,9 +507,11 @@ Wave Pay: ${SHOP_CONFIG.waveNumber} (${SHOP_CONFIG.waveName})
             <div className="px-8 pb-8 pt-0">
                <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
                  <h4 className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Shop Configuration</h4>
-                 <div className="grid grid-cols-2 gap-y-4 gap-x-2">
+                 <div className="grid grid-cols-2 gap-4">
+                    
+                    {/* Telegram */}
                     <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                        <div className="p-2 rounded-lg bg-indigo-50 dark:bg-slate-800/80 text-indigo-600 dark:text-indigo-400 shrink-0">
+                        <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
                             <MessageCircle size={16} />
                         </div>
                         <div className="flex flex-col overflow-hidden">
@@ -515,24 +519,40 @@ Wave Pay: ${SHOP_CONFIG.waveNumber} (${SHOP_CONFIG.waveName})
                             <span className="text-xs font-medium truncate">{SHOP_CONFIG.telegramUser}</span>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                        <div className="p-2 rounded-lg bg-indigo-50 dark:bg-slate-800/80 text-indigo-600 dark:text-indigo-400 shrink-0">
-                            <Wallet size={16} />
-                        </div>
-                        <div className="flex flex-col overflow-hidden">
-                            <span className="text-[10px] text-gray-400 uppercase font-bold">KPay / Wave / Phone</span>
-                            <span className="text-xs font-medium truncate">{SHOP_CONFIG.phoneNumber}</span>
-                        </div>
-                    </div>
-                     <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400 col-span-2">
-                        <div className="p-2 rounded-lg bg-indigo-50 dark:bg-slate-800/80 text-indigo-600 dark:text-indigo-400 shrink-0">
-                            <Store size={16} />
+
+                    {/* Hours */}
+                     <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                        <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
+                            <Clock size={16} />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] text-gray-400 uppercase font-bold">Business Hours</span>
-                            <span className="text-xs font-medium">{SHOP_CONFIG.shopHours}</span>
+                            <span className="text-[10px] text-gray-400 uppercase font-bold">Open Hours</span>
+                            <span className="text-xs font-medium truncate">{SHOP_CONFIG.shopHours}</span>
                         </div>
                     </div>
+
+                    {/* KPay */}
+                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                        <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+                            <CreditCard size={16} />
+                        </div>
+                        <div className="flex flex-col overflow-hidden">
+                            <span className="text-[10px] text-gray-400 uppercase font-bold">KBZ Pay</span>
+                            <span className="text-xs font-medium truncate">{SHOP_CONFIG.kpayNumber}</span>
+                        </div>
+                    </div>
+
+                    {/* Wave */}
+                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                        <div className="p-2 rounded-lg bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 shrink-0">
+                            <Waves size={16} />
+                        </div>
+                        <div className="flex flex-col overflow-hidden">
+                            <span className="text-[10px] text-gray-400 uppercase font-bold">Wave Pay</span>
+                            <span className="text-xs font-medium truncate">{SHOP_CONFIG.waveNumber}</span>
+                        </div>
+                    </div>
+
                  </div>
                </div>
             </div>
