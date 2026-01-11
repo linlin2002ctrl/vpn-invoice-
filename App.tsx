@@ -10,14 +10,14 @@ import {
   Send,
   Moon,
   Sun,
-  Phone,
-  MessageCircle,
   Clock,
   ClipboardPaste,
   ShieldCheck,
   CreditCard,
   Waves,
-  Smartphone
+  Smartphone,
+  AlertCircle,
+  MessageCircle
 } from 'lucide-react';
 
 // --- 1. CONFIGURATION ---
@@ -33,7 +33,7 @@ const SHOP_CONFIG = {
   shopHours: "6:00 PM - 10:00 PM"
 };
 
-const STORAGE_KEY = 'vpn_invoice_draft_v8_3';
+const STORAGE_KEY = 'vpn_invoice_draft_v8_4';
 
 // --- TYPES ---
 
@@ -93,7 +93,6 @@ export default function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
       const stored = localStorage.getItem('theme');
-      // Default to dark if not set, or if set to dark
       return stored === 'light' ? 'light' : 'dark';
     }
     return 'dark';
@@ -106,7 +105,6 @@ export default function App() {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // Merge with initial state to ensure all fields exist
           return { ...INITIAL_STATE, ...parsed };
         } catch (e) {
           console.error("Failed to parse draft", e);
@@ -118,10 +116,12 @@ export default function App() {
 
   const [errors, setErrors] = useState({ username: false, outlineKey: false });
   const [copied, setCopied] = useState(false);
+  
+  // Notification State
+  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
 
   // --- EFFECTS ---
 
-  // Apply Theme
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
@@ -132,10 +132,16 @@ export default function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Save Draft to LocalStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
   }, [formData]);
+
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   // --- COMPUTED VALUES ---
 
@@ -150,20 +156,21 @@ export default function App() {
   const formattedExpireDate = formatDateForDisplay(expireDateRaw);
 
   const generatedMessage = useMemo(() => {
-    // CRITICAL: Added \n (newlines) inside the backticks to force Telegram Mobile to show the Copy Box
+    // v8.4 Update:
+    // Main Key = Block Code (Triple Backticks) for clear separation
+    // Smart Key = Inline Code (Single Backticks) for easy "Tap to Copy" on Mobile
+    
     const mainKeyPart = formData.outlineKey 
       ? `\`\`\`\n${formData.outlineKey.trim()}\n\`\`\`` 
       : '```\n[MAIN KEY]\n```';
     
-    // Logic for Smart Key (Optional)
     let smartKeySection = '';
     if (formData.smartKey && formData.smartKey.trim() !== '') {
       smartKeySection = `
 👇 **Smart Key (Data ကြည့်ရန် ဤ Key ကိုသုံးပါ)** 👇
-\`\`\`\n${formData.smartKey.trim()}\n\`\`\``;
+\`${formData.smartKey.trim()}\``;
     }
 
-    // Format Shop Hours for Message
     const formattedHours = SHOP_CONFIG.shopHours
       .replace(/PM/g, "နာရီ")
       .replace(/AM/g, "နာရီ")
@@ -198,8 +205,6 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Clear error for this field if it exists
     if (name === 'username' || name === 'outlineKey') {
       setErrors(prev => ({ ...prev, [name]: false }));
     }
@@ -209,46 +214,60 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
     if (window.confirm('Clear all fields and reset form?')) {
       const newState = {
         ...INITIAL_STATE,
-        purchaseDate: new Date().toISOString().split('T')[0] // Reset date to Today
+        purchaseDate: new Date().toISOString().split('T')[0]
       };
       setFormData(newState);
       setErrors({ username: false, outlineKey: false });
       setCopied(false);
       localStorage.removeItem(STORAGE_KEY);
+      setNotification({ type: 'success', message: 'Form reset successfully' });
     }
   };
 
-  const handlePasteKey = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) {
-        setFormData(prev => ({ ...prev, outlineKey: text }));
-        setErrors(prev => ({ ...prev, outlineKey: false }));
-      }
-    } catch (err) {
-      console.error("Clipboard read failed", err);
-      // Fallback
-      const el = document.querySelector('textarea[name="outlineKey"]') as HTMLTextAreaElement;
-      if (el) el.focus();
-    }
-  };
+  const handlePaste = async (field: 'outlineKey' | 'smartKey') => {
+    const targetElement = document.querySelector(`textarea[name="${field}"]`) as HTMLTextAreaElement;
 
-  const handlePasteSmartKey = async () => {
+    if (!window.isSecureContext) {
+      setNotification({ 
+        type: 'error', 
+        message: 'Clipboard requires HTTPS (Secure Context). Please paste manually.' 
+      });
+      if (targetElement) targetElement.focus();
+      return;
+    }
+
+    if (!navigator.clipboard?.readText) {
+       setNotification({ 
+        type: 'error', 
+        message: 'Clipboard API not supported. Please paste manually.' 
+      });
+      if (targetElement) targetElement.focus();
+      return;
+    }
+
     try {
       const text = await navigator.clipboard.readText();
       if (text) {
-        setFormData(prev => ({ ...prev, smartKey: text }));
+        setFormData(prev => ({ ...prev, [field]: text }));
+        if (field === 'outlineKey') setErrors(prev => ({ ...prev, outlineKey: false }));
+        setNotification({ type: 'success', message: 'Pasted successfully!' });
+      } else {
+        setNotification({ type: 'error', message: 'Clipboard is empty.' });
       }
-    } catch (err) {
-      console.error("Clipboard read failed", err);
-      // Fallback
-      const el = document.querySelector('textarea[name="smartKey"]') as HTMLTextAreaElement;
-      if (el) el.focus();
+    } catch (err: any) {
+      console.error("Clipboard paste error:", err);
+      let errorMessage = 'Failed to read clipboard.';
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMessage = 'Permission denied. Click the lock icon in your URL bar to allow clipboard access.';
+      } else if (err.name === 'SecurityError') {
+        errorMessage = 'Security settings blocked access.';
+      }
+      setNotification({ type: 'error', message: errorMessage });
+      if (targetElement) targetElement.focus();
     }
   };
 
   const handleCopy = async () => {
-    // 1. Validation
     const newErrors = {
       username: !formData.username.trim(),
       outlineKey: !formData.outlineKey.trim()
@@ -256,25 +275,42 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
 
     if (newErrors.username || newErrors.outlineKey) {
       setErrors(newErrors);
+      setNotification({ type: 'error', message: 'Please fill in required fields.' });
       return;
     }
 
-    // 2. Copy to Clipboard
     try {
       await navigator.clipboard.writeText(generatedMessage);
       setCopied(true);
+      setNotification({ type: 'success', message: 'Invoice copied to clipboard!' });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy text: ', err);
+      setNotification({ type: 'error', message: 'Failed to copy. Please select text manually.' });
     }
   };
 
   return (
-    <div className="min-h-screen py-6 px-4 md:py-12 md:px-8 font-sans transition-colors duration-300 bg-gray-100 dark:bg-slate-900 text-gray-900 dark:text-white flex items-center justify-center">
+    <div className="min-h-screen py-6 px-4 md:py-12 md:px-8 font-sans transition-colors duration-300 bg-gray-100 dark:bg-slate-900 text-gray-900 dark:text-white flex items-center justify-center relative">
       
+      {/* Notification */}
+      {notification && (
+        <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 px-6 py-4 rounded-xl shadow-2xl z-50 flex items-start md:items-center gap-3 animate-[fade-in-down_0.3s_ease-out] border max-w-sm md:max-w-md w-full ${
+          notification.type === 'error' 
+            ? 'bg-red-50 dark:bg-red-900/90 border-red-200 dark:border-red-800 text-red-800 dark:text-red-100' 
+            : 'bg-emerald-50 dark:bg-emerald-900/90 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-100'
+        }`}>
+          {notification.type === 'error' 
+            ? <AlertCircle size={20} className="shrink-0 mt-0.5 md:mt-0" /> 
+            : <CheckCircle2 size={20} className="shrink-0 mt-0.5 md:mt-0" />
+          }
+          <span className="text-sm font-semibold leading-tight">{notification.message}</span>
+        </div>
+      )}
+
       <div className="w-full max-w-6xl bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-gray-200 dark:border-slate-700/50 transition-all duration-300">
         
-        {/* --- Header --- */}
+        {/* Header */}
         <div className="bg-indigo-600 px-6 py-5 md:px-8 flex items-center justify-between shadow-md relative overflow-hidden shrink-0">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
           
@@ -284,7 +320,7 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
             </div>
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight leading-tight">{SHOP_CONFIG.shopName}</h1>
-              <p className="text-indigo-100 text-xs md:text-sm font-medium opacity-90">Invoice Generator v8.3</p>
+              <p className="text-indigo-100 text-xs md:text-sm font-medium opacity-90">Invoice Generator v8.4</p>
             </div>
           </div>
           
@@ -306,10 +342,10 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
           </div>
         </div>
 
-        {/* --- Main Content --- */}
+        {/* Content */}
         <div className="flex flex-col lg:flex-row flex-1">
           
-          {/* LEFT COLUMN: Input Form */}
+          {/* LEFT: Form */}
           <div className="flex-1 p-6 md:p-8 space-y-6 overflow-y-auto">
             <div className="space-y-1 mb-2">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
@@ -322,7 +358,7 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
 
             <div className="space-y-6">
               
-              {/* Username Input */}
+              {/* Username */}
               <div className="group">
                 <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 ml-1">
                   Username <span className="text-red-500">*</span>
@@ -345,13 +381,10 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
                     }`}
                   />
                 </div>
-                {errors.username && <p className="text-red-500 text-xs mt-1.5 ml-1 font-medium">Username is required</p>}
               </div>
 
-              {/* Date & Duration Grid */}
+              {/* Date & Duration */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Purchase Date */}
                 <div className="group">
                   <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 ml-1">
                     Purchase Date
@@ -371,7 +404,6 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
                   </div>
                 </div>
 
-                {/* Duration Select */}
                 <div className="group">
                   <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 ml-1">
                     Duration
@@ -428,9 +460,8 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
                     Outline Key <span className="text-red-500">*</span>
                   </label>
                   <button
-                    onClick={handlePasteKey}
+                    onClick={() => handlePaste('outlineKey')}
                     className="text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center gap-1.5 hover:text-indigo-800 dark:hover:text-indigo-300 transition-all hover:scale-105 active:scale-95 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-md"
-                    title="Paste from clipboard"
                   >
                     <ClipboardPaste size={14} /> 
                     <span>Paste</span>
@@ -455,19 +486,17 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
                     }`}
                   />
                 </div>
-                {errors.outlineKey && <p className="text-red-500 text-xs mt-1.5 ml-1 font-medium">Outline Key is required</p>}
               </div>
 
-              {/* Smart Key (New v8.3 Feature: Smartphone Icon) */}
+              {/* Smart Key */}
               <div className="group">
                 <div className="flex justify-between items-center mb-2 px-1">
                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Smart Key <span className="text-gray-400 font-normal lowercase">(optional)</span>
                   </label>
                   <button
-                    onClick={handlePasteSmartKey}
+                    onClick={() => handlePaste('smartKey')}
                     className="text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center gap-1.5 hover:text-indigo-800 dark:hover:text-indigo-300 transition-all hover:scale-105 active:scale-95 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-md"
-                    title="Paste from clipboard"
                   >
                     <ClipboardPaste size={14} /> 
                     <span>Paste</span>
@@ -493,12 +522,11 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Preview & Actions */}
+          {/* RIGHT: Preview */}
           <div className="lg:w-5/12 bg-gray-50 dark:bg-slate-900/50 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 flex flex-col">
             
             <div className="p-6 md:p-8 flex-1 flex flex-col min-h-[450px]">
 
-              {/* Preview Header */}
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
                   <Send size={14} /> Telegram Preview
@@ -508,13 +536,39 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
                 </span>
               </div>
 
-              {/* Preview Box */}
               <div className="flex-1 relative rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden group mb-6">
                 <div className="absolute inset-0 overflow-y-auto custom-scrollbar p-5">
                   <div className="text-sm leading-relaxed whitespace-pre-wrap text-gray-800 dark:text-gray-200 break-words font-sans selection:bg-indigo-500/30">
-                    {/* Render message with basic formatting simulation */}
                     {generatedMessage.split('\n').map((line, i) => {
-                      // Bold formatting simulation
+                      // 1. Block Code (Triple Backticks) - For Main Key
+                      if (line.trim().startsWith('```')) {
+                           const content = line.replace(/```/g, '').trim();
+                           return (
+                               <div key={i} className="my-2 p-3 rounded-lg bg-gray-100 dark:bg-slate-900/80 border border-gray-200 dark:border-slate-700 font-mono text-xs break-all text-indigo-600 dark:text-indigo-400 select-all shadow-sm">
+                                   {content}
+                               </div>
+                           )
+                      }
+                      
+                      // 2. Inline Code (Single Backticks) - For Smart Key
+                      if (line.includes('`')) {
+                        const parts = line.split('`');
+                        return (
+                          <div key={i} className="min-h-[1.5em] my-1 leading-loose">
+                            {parts.map((part, pIdx) => (
+                                pIdx % 2 === 1 ? (
+                                  <span key={pIdx} className="px-1.5 py-0.5 mx-0.5 rounded-md bg-indigo-100 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 font-mono text-xs text-indigo-700 dark:text-indigo-300 select-all cursor-pointer font-medium hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-colors">
+                                    {part}
+                                  </span>
+                                ) : (
+                                  <span key={pIdx}>{part}</span>
+                                )
+                            ))}
+                          </div>
+                        )
+                      }
+
+                      // 3. Bold Text
                       if (line.includes('**')) {
                           const parts = line.split('**');
                           return (
@@ -524,27 +578,19 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
                                 ))}
                             </div>
                           );
-                        }
-                        // Code block simulation
-                        if (line.trim().startsWith('```')) {
-                           const content = line.replace(/```/g, '');
-                           return (
-                               <div key={i} className="my-1 p-2 rounded bg-gray-100 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 font-mono text-xs break-all text-indigo-600 dark:text-indigo-400 select-all min-h-[10px]">
-                                   {content}
-                               </div>
-                           )
-                        }
-                        // Separator simulation
-                        if (line.includes('-----------------------------')) {
-                            return <div key={i} className="h-px bg-gray-200 dark:bg-slate-700 my-4"></div>
-                        }
-                        return <div key={i} className="min-h-[1.5em]">{line}</div>;
+                      }
+
+                      // 4. Separator
+                      if (line.includes('-----------------------------')) {
+                          return <div key={i} className="h-px bg-gray-200 dark:bg-slate-700 my-4"></div>
+                      }
+                      
+                      return <div key={i} className="min-h-[1.5em]">{line}</div>;
                     })}
                   </div>
                 </div>
               </div>
 
-              {/* Copy Button */}
               <button
                 onClick={handleCopy}
                 className={`w-full py-4 px-6 rounded-xl font-bold text-base shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2.5 ${
@@ -567,13 +613,12 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
               </button>
             </div>
             
-            {/* Shop Footer */}
+            {/* Footer */}
             <div className="px-8 pb-8 pt-0">
                <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
                  <h4 className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Shop Configuration</h4>
                  <div className="grid grid-cols-2 gap-4">
                     
-                    {/* Telegram */}
                     <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                         <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
                             <MessageCircle size={16} />
@@ -584,7 +629,6 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
                         </div>
                     </div>
 
-                    {/* Hours */}
                      <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                         <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
                             <Clock size={16} />
@@ -595,7 +639,6 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
                         </div>
                     </div>
 
-                    {/* KPay */}
                     <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                         <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
                             <CreditCard size={16} />
@@ -606,7 +649,6 @@ ${SHOP_CONFIG.kpayNumber} (${SHOP_CONFIG.kpayName})
                         </div>
                     </div>
 
-                    {/* Wave */}
                     <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                         <div className="p-2 rounded-lg bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 shrink-0">
                             <Waves size={16} />
