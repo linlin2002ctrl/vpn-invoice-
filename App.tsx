@@ -19,7 +19,7 @@ import {
   ShieldCheck,
   CreditCard,
   Waves,
-  QrCode
+  ScanQrCode
 } from 'lucide-react';
 
 // --- 1. CONFIGURATION ---
@@ -467,7 +467,7 @@ Wave Pay: ${SHOP_CONFIG.waveNumber} (${SHOP_CONFIG.waveName})
                 
                 <div className="relative">
                   <div className="absolute top-3.5 left-4 pointer-events-none text-gray-400">
-                    <QrCode size={18} />
+                    <ScanQrCode size={18} />
                   </div>
                   <textarea
                     name="smartKey"
